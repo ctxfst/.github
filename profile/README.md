@@ -14,10 +14,18 @@
 - We do not aim to be "a hosted service": ctxfst is a standard plus reference implementations, not a SaaS product.
 - We do not treat resumes or personal branding as the core use case: skills repos are reference docs and templates, not portfolios.
 
+- ### Non-goals of ctxc (the reference compiler)
+
+To avoid confusion about scope:
+
+- **ctxc is not Markdown-only**: it processes context-first structure, regardless of source format (Markdown, MDX, AsciiDoc, or others).
+- **ctxc is not an LLM tool**: it is a compiler that produces structured output; what you do with that output (embed it, index it, feed it to LLMs) is up to you.
+- **ctxc is not a runtime**: it does not execute code, serve APIs, or manage deployments. It compiles documents, period.
+
 ## Repositories in this organization
 
 - `ctxfst/compiler` – the ctxc reference implementation that compiles context-first documents into structured data.
-- `ctxfst/spec` – the formal ctxfst specification: semantic model, fields, cross-format mappings, and compatibility rules.
+- `ctxfst/spec` – the formal ctxfst specification: semantic model, fields, cross-format mappings, and compatibility rules. **ctxc** is the reference compiler that implements this spec, not the format itself.
 - `ctxfst/ctx-skills` – forkable skills / KB examples that demonstrate how to write ctxfst-compliant documents.
 
 ## How you can use it
