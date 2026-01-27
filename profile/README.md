@@ -42,21 +42,21 @@ Instead of splitting by character count, ctxfst defines boundaries at **logical 
 
 ```mdx
 ---
-title: "技能知識庫"
-global_context: "這份文件整理了我在 AI、RAG 和工程實踐中的核心技能點，目標是作為 Context-first Document 的範例。"
+title: "Skills Knowledge Base"
+global_context: "This document organizes my core skills in AI, RAG, and engineering practices, serving as a Context-first Document example."
 ---
 
-<Chunk id="skill-01" semantic_tags={["AI", "Embedding"]} context="基本概念：向量與 embedding">
-向量是將資料轉換成數字表示的方式，以便進行相似度計算。
+<Chunk id="skill-01" semantic_tags={["AI", "Embedding"]} context="Core concept: vectors and embeddings">
+Vectors are numerical representations of data, enabling similarity calculations.
 </Chunk>
 
-<Chunk id="skill-02" semantic_tags={["RAG", "Pipeline"]} context="RAG 系統流程概覽">
-檢索增強生成 (RAG) 流程通常包括：
-1. 資料 ingestion
+<Chunk id="skill-02" semantic_tags={["RAG", "Pipeline"]} context="RAG system workflow overview">
+Retrieval-Augmented Generation (RAG) typically involves:
+1. Data ingestion
 2. Chunking
 3. Embedding
-4. 向量檢索
-5. 將檢索結果餵給 LLM
+4. Vector retrieval
+5. Feeding retrieved results to LLM
 </Chunk>
 ```
 
