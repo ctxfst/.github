@@ -18,23 +18,44 @@ These orphaned chunks become noise in your vector database.
 
 ## How ctxfst Solves This
 
-ctxfst applies two techniques **at the document format level**, before any RAG pipeline touches your content:
+ctxfst builds on **Anthropic's Contextual Retrieval** and extends it with **Semantic Chunking**, applying both techniques **at the document format level**, before any RAG pipeline touches your content:
 
-### 1. Contextual Embeddings (Anthropic's Contextual Retrieval)
+### 1. Foundation: Contextual Retrieval (Anthropic)
 
-Each chunk carries its document-level context as metadata:
+Anthropic's Contextual Retrieval generates a short, document-aware context string for each chunk (50–100 tokens) and prepends it to the original chunk, then builds both:
+- **Contextual Embeddings** — vector search over contextualized chunks
+- **Contextual BM25** — keyword search over the same contextualized chunks
+
+This preserves key identifiers (who/what/when/where) that fixed-length chunking often drops.
 
 ```diff
 - "profit increased by 20%"
 + "In Apple's 2023 Q4 earnings report, regarding the Services segment: profit increased by 20%"
 ```
 
-### 2. Semantic Chunking
+References: [Research](https://www.anthropic.com/research/contextual-retrieval), [Engineering](https://www.anthropic.com/engineering/contextual-retrieval), [News post](https://www.anthropic.com/news/contextual-retrieval), [Cookbook](https://platform.claude.com/cookbook/capabilities-contextual-embeddings-guide)
 
-Instead of splitting by character count, ctxfst defines boundaries at **logical units**:
-- Section headers
-- Concept transitions  
-- Explicit semantic markers
+### 2. ctxfst Extension: Semantic Chunking
+
+**Where Anthropic assumes chunks are already split**, ctxfst adds an upstream layer: **Semantic Chunking** — splitting by meaning, not character count.
+
+Instead of fixed-length splitting, semantic chunking:
+1. Splits text into sentences
+2. Generates embeddings for each sentence
+3. Calculates similarity between consecutive sentences
+4. Creates chunk boundaries where similarity drops (semantic breakpoints)
+
+This forms logically coherent "paragraphs" or units, improving retrieval accuracy especially for multi-topic documents.
+
+```
+Fixed chunking:    [500 chars] [500 chars] [500 chars]  ← may cut mid-sentence
+Semantic chunking: [Topic A]   [Topic B]   [Topic C]    ← respects meaning boundaries
+```
+
+References:
+- **Academic**: [Is Semantic Chunking Worth the Computational Cost?](https://aclanthology.org/2025.findings-naacl.114/) (NAACL 2025)
+- **Practical**: [Weaviate Chunking Strategies](https://weaviate.io/blog/chunking-strategies-for-rag), [Pinecone Tutorial](https://www.pinecone.io/learn/generation/better-rag/02b-semantic-chunking.ipynb)
+- **Libraries**: [semantic-chunking (JS)](https://github.com/jparkerweb/semantic-chunking), [Semantic_chunking (Python)](https://github.com/ThanhHung2112/Semantic_chunking)
 
 ---
 
