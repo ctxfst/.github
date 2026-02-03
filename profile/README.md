@@ -43,9 +43,16 @@ chunks:
   - id: skill:python
     tags: [Python, Backend, FastAPI]
     context: "Author's Python skills for REST APIs and data pipelines"
+    created_at: "2026-02-03"
+    version: 1
+    priority: high
+    dependencies: []
   - id: project:payment-gateway
     tags: [Project, FinTech, Go]
     context: "Payment system handling 10k TPS with hybrid architecture"
+    created_at: "2026-01-15"
+    version: 2
+    type: text
 ---
 
 <Chunk id="skill:python">
@@ -59,16 +66,17 @@ Built a payment processing system handling 10k transactions per second...
 </Chunk>
 ```
 
-### Why This Matters for Modern RAG
+### Why This Matters for Modern RAG (2026)
 
 | System | How ctxfst Helps |
 |--------|------------------|
 | **LanceDB** | Store `context`, `content`, `tags` as separate columns; filter by tags, embed context+content |
-| **LightRAG** | `tags` become graph nodes; `context` improves entity extraction |
+| **LightRAG** | `tags` become graph nodes; `dependencies` create edges; `context` improves entity extraction |
 | **HippoRAG 2** | Structured `id` enables cross-document linking; tags form knowledge graph edges |
-| **LlamaIndex Hybrid** | Metadata filters (`tags`) + vector search (`context+content`) |
-| **RAG-Anything** | Multi-modal attributes in frontmatter (timestamps, sources) |
-| **DyG-RAG** | Dynamic graphs built from evolving tag relationships |
+| **LlamaIndex Agentic** | `priority` hints guide agent retrieval order; hybrid search with metadata filters |
+| **RAG-Anything** | Multi-modal support via `type` field (text/image/video/audio) |
+| **DyG-RAG / T-GRAG** | Temporal graphs from `created_at` + `version`; dynamic relationships via tags |
+| **LangGraph** | `dependencies` enable prerequisite context loading; `priority` for retrieval planning |
 
 ---
 
@@ -132,6 +140,55 @@ This combination enables **end-to-end context preservation** from document autho
 
 ---
 
+## 2026 RAG Extensions
+
+ctxfst evolves with RAG trends. The format supports optional extension fields for advanced use cases:
+
+### Temporal RAG
+
+```yaml
+chunks:
+  - id: skill:llm-prompt
+    created_at: "2026-02-03"  # ISO date for temporal indexing
+    version: 3                 # Track content updates over time
+```
+
+Enables **point-in-time retrieval** (query knowledge as of specific date) and **version control** for evolving knowledge bases. Compatible with T-GRAG, Temporal GraphRAG, and versioned vector stores.
+
+### Agentic RAG
+
+```yaml
+chunks:
+  - id: api:auth
+    priority: high             # Hints for agent retrieval ordering
+    dependencies: [api:setup]  # Prerequisite knowledge for agents
+```
+
+Helps AI agents understand **which chunks to retrieve first** and **what context is needed** before answering. Used by LangGraph, AutoGen RAG, and LlamaIndex agent pipelines.
+
+### Multi-Modal RAG
+
+```yaml
+chunks:
+  - id: diagram:architecture
+    type: image                # text, image, video, audio
+    content_path: "./arch.png" # Path to media file
+```
+
+Enables structured retrieval of **non-text content** alongside text. Prepares documents for CLIP-based retrieval, Milvus RAG-Anything, and multi-modal LightRAG.
+
+### Extension Timeline
+
+| Extension | Purpose | Since | Spec |
+|-----------|---------|-------|------|
+| **Temporal RAG** | `created_at`, `version` for time-aware queries | v1.1 (2026-02) | Optional |
+| **Agentic RAG** | `priority`, `dependencies` for agent guidance | v1.1 (2026-02) | Optional |
+| **Multi-Modal RAG** | `type`, `content_path` for media content | v1.1 (2026-02) | Optional |
+
+All extension fields are **optional** and **backward compatible**. Documents without them work with all existing RAG systems.
+
+---
+
 ## Export to Modern RAG Systems
 
 ctxfst documents export to JSON ready for ingestion:
@@ -140,13 +197,18 @@ ctxfst documents export to JSON ready for ingestion:
 python export_to_lancedb.py document.md --output chunks.json
 ```
 
-Output:
+Output (with 2026 extensions):
 ```json
 {
   "id": "skill:python",
   "context": "Author's Python skills...",
   "content": "## Python\nI use Python for...",
   "tags": ["Python", "Backend"],
+  "created_at": "2026-02-03",
+  "version": 1,
+  "type": "text",
+  "priority": "high",
+  "dependencies": [],
   "source": "skills.md"
 }
 ```
@@ -185,6 +247,30 @@ results = table.search(query_embedding)
 
 ---
 
+## Evolution Roadmap
+
+ctxfst is designed to adapt to RAG advances while maintaining backward compatibility:
+
+### Released
+
+- ✅ **v1.0** (2026-01) — Core frontmatter format with `context`, `tags`, `content` separation
+- ✅ **v1.1** (2026-02) — Temporal, Agentic, Multi-Modal extensions for 2026 RAG trends
+
+### In Progress
+
+- 🚧 **v1.2** (2026-Q2) — Parametric RAG metadata support, streaming chunk updates
+- 🚧 **Integration examples** — Reference implementations for LanceDB, LightRAG, LlamaIndex
+
+### Planned
+
+- 📋 **v2.0** (2026-Q3) — Self-learning embeddings, feedback loop metadata
+- 📋 **ctxc compiler** — Automatic context generation from source documents
+- 📋 **Formal spec** — JSON Schema validation and cross-language parsers
+
+**Philosophy**: ctxfst evolves as RAG systems evolve, but all extensions are **optional** and **backward compatible**. Simple use cases stay simple; advanced features are available when needed.
+
+---
+
 ## Getting Started
 
 1. **Fork [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md)** — includes validation + export scripts
@@ -212,4 +298,4 @@ results = table.search(query_embedding)
 
 ---
 
-<sub>ctxfst is in early design phase. Contributions and real-world examples welcome.</sub>
+<sub>ctxfst evolves with RAG trends. Contributions, real-world examples, and extension proposals welcome. 🚀</sub>
