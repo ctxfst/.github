@@ -6,6 +6,45 @@
 
 ---
 
+## Documents as a Human–Machine Interface
+
+Most RAG tooling treats chunking as a one-way pipeline:
+
+```
+document → ingest → chunks/embeddings → (no feedback)
+```
+
+That framing optimizes for retrieval throughput, but it leaves authors blind: when results are wrong, you only see symptoms (bad retrieval), not causes (ambiguous context, confusing boundaries, missing metadata).
+
+ctxfst flips the direction of control:
+- Authors decide chunk boundaries while writing
+- `context` becomes a reviewable, editable artifact
+- Chunks are meant to be inspected, revised, and versioned like any other interface
+
+This turns documents into something you can test and iterate on, instead of a black box after ingestion.
+
+### The Missing Piece: Diagnostics
+
+ctxfst makes changes *possible*, but it does not automatically tell you *what to change*. A complete workflow typically needs a diagnostic layer on top of the format layer:
+
+```
+Format layer: frontmatter + <Chunk> tags → editable structure
+Diagnostic layer: checks → signals → suggestions → (optional) edits for review
+```
+
+Diagnostics can be as simple as warnings ("two chunks may be confusingly similar") or as advanced as suggested rewrites for `context`. Where and when diagnostics run is a design choice:
+
+| When diagnostics run | Upside | Downside |
+|----------------------|--------|----------|
+| During writing (linter) | Fast feedback, lowest change cost | May interrupt flow; may require embeddings |
+| Before ingest (CI) | Batch-friendly, consistent gate | You discover issues after writing |
+| After failures (post-mortem) | Only analyze real problems | Highest cost; harder root-cause analysis |
+| On-demand (author-triggered) | Human stays in control of timing | Relies on author to ask for checks |
+
+ctxfst is compatible with all of these, but the default UX we target is **on-demand checks**: the author requests feedback when they want it, and chooses the level of help (mark issues → suggest fixes → propose edits).
+
+---
+
 ## Why not Anthropic's Original Approach?
 
 Anthropic's [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) is groundbreaking, but its original implementation has limitations:
