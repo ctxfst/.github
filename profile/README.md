@@ -4,119 +4,212 @@
 > ctxfst is a document standard that weaves context into the structure itself,  
 > so LanceDB, LightRAG, or any retrieval system gets complete semantics on read.
 
-## The Problem with Traditional Chunking
+---
 
-When you split documents by fixed character counts, critical context disappears:
+## Why not Anthropic's Original Approach?
 
-| Raw Chunk | What's Missing |
-|-----------|----------------|
-| "profit increased by 20%" | Which company? Which year? Which business unit? |
-| "the API returns a 403 error" | Which API? What endpoint? What auth method? |
-| "we decided to migrate to Kubernetes" | Who is "we"? What were we migrating from? |
+Anthropic's [Contextual Retrieval](https://www.anthropic.com/news/contextual-retrieval) is groundbreaking, but its original implementation has limitations:
 
-These orphaned chunks become noise in your vector database.
+| Anthropic Original | ctxfst Approach |
+|--------------------|-----------------|
+| Context **merged into** chunk content | Context stored as **structured metadata** |
+| Single combined string for embedding | Separate `context`, `content`, `tags` columns |
+| Hard to update context without re-embedding | Update context independently |
+| One-dimensional retrieval | Multi-dimensional: vector + graph + filter |
 
-## How ctxfst Solves This
+### The Problem with "Context Prepending"
 
-ctxfst builds on **Anthropic's Contextual Retrieval** and extends it with **Semantic Chunking**, applying both techniques **at the document format level**, before any RAG pipeline touches your content:
-
-### 1. Foundation: Contextual Retrieval (Anthropic)
-
-Anthropic's Contextual Retrieval generates a short, document-aware context string for each chunk (50–100 tokens) and prepends it to the original chunk, then builds both:
-- **Contextual Embeddings** — vector search over contextualized chunks
-- **Contextual BM25** — keyword search over the same contextualized chunks
-
-This preserves key identifiers (who/what/when/where) that fixed-length chunking often drops.
-
-```diff
-- "profit increased by 20%"
-+ "In Apple's 2023 Q4 earnings report, regarding the Services segment: profit increased by 20%"
+```python
+# Anthropic's approach: merge context + content into one string
+stored_chunk = "This is about Q2 revenue... " + "Revenue grew 3%"
+embedding = embed(stored_chunk)
 ```
 
-References: [Research](https://www.anthropic.com/research/contextual-retrieval), [Engineering](https://www.anthropic.com/engineering/contextual-retrieval), [News post](https://www.anthropic.com/news/contextual-retrieval), [Cookbook](https://platform.claude.com/cookbook/capabilities-contextual-embeddings-guide)
+This works for simple vector search, but **modern RAG systems need structure**:
+- **LanceDB** — needs separate columns for filtering and hybrid search
+- **LightRAG / HippoRAG** — extract entities from `tags`, build knowledge graphs
+- **LlamaIndex** — hybrid retrieval with metadata filters
+- **RAG-Anything / DyG-RAG** — multi-modal and dynamic graph retrieval
 
-### 2. ctxfst Extension: Semantic Chunking
+---
 
-**Where Anthropic assumes chunks are already split**, ctxfst adds an upstream layer: **Semantic Chunking** — splitting by meaning, not character count.
+## ctxfst: Structured Frontmatter Format
 
-Instead of fixed-length splitting, semantic chunking:
-1. Splits text into sentences
-2. Generates embeddings for each sentence
-3. Calculates similarity between consecutive sentences
-4. Creates chunk boundaries where similarity drops (semantic breakpoints)
+ctxfst separates **metadata** from **content** using YAML frontmatter:
 
-This forms logically coherent "paragraphs" or units, improving retrieval accuracy especially for multi-topic documents.
+```markdown
+---
+chunks:
+  - id: skill:python
+    tags: [Python, Backend, FastAPI]
+    context: "Author's Python skills for REST APIs and data pipelines"
+  - id: project:payment-gateway
+    tags: [Project, FinTech, Go]
+    context: "Payment system handling 10k TPS with hybrid architecture"
+---
+
+<Chunk id="skill:python">
+## Python
+I use Python for building REST APIs and data pipelines...
+</Chunk>
+
+<Chunk id="project:payment-gateway">
+## Payment Gateway
+Built a payment processing system handling 10k transactions per second...
+</Chunk>
+```
+
+### Why This Matters for Modern RAG
+
+| System | How ctxfst Helps |
+|--------|------------------|
+| **LanceDB** | Store `context`, `content`, `tags` as separate columns; filter by tags, embed context+content |
+| **LightRAG** | `tags` become graph nodes; `context` improves entity extraction |
+| **HippoRAG 2** | Structured `id` enables cross-document linking; tags form knowledge graph edges |
+| **LlamaIndex Hybrid** | Metadata filters (`tags`) + vector search (`context+content`) |
+| **RAG-Anything** | Multi-modal attributes in frontmatter (timestamps, sources) |
+| **DyG-RAG** | Dynamic graphs built from evolving tag relationships |
+
+---
+
+## How ctxfst Differs from Anthropic
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Anthropic Original                                         │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ "Context here... + Original content all merged together"││
+│  └─────────────────────────────────────────────────────────┘│
+│                         ↓                                   │
+│                 Single embedding                            │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  ctxfst Frontmatter Format                                  │
+│  ┌──────────────┐ ┌───────────────┐ ┌─────────────────────┐ │
+│  │ context      │ │ tags          │ │ content             │ │
+│  │ (metadata)   │ │ (filterable)  │ │ (original text)     │ │
+│  └──────────────┘ └───────────────┘ └─────────────────────┘ │
+│         ↓                 ↓                   ↓             │
+│    Graph nodes      Filter queries     Vector embedding     │
+│    Entity extraction                   (context + content)  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**ctxfst gives you the same embedding quality as Anthropic's approach** (context + content combined for embedding), **plus structured metadata** for:
+- Hybrid search (vector + BM25 + filter)
+- Knowledge graph construction
+- Incremental updates
+- Multi-system compatibility
+
+---
+
+## Semantic Chunking + Structured Metadata
+
+ctxfst combines two techniques:
+
+### 1. Semantic Chunking (Upstream)
+
+Split documents by **meaning boundaries**, not character count:
 
 ```
 Fixed chunking:    [500 chars] [500 chars] [500 chars]  ← may cut mid-sentence
-Semantic chunking: [Topic A]   [Topic B]   [Topic C]    ← respects meaning boundaries
+Semantic chunking: [Topic A]   [Topic B]   [Topic C]    ← respects meaning
 ```
 
-References:
-- **Academic**: [Is Semantic Chunking Worth the Computational Cost?](https://aclanthology.org/2025.findings-naacl.114/) (NAACL 2025)
-- **Practical**: [Weaviate Chunking Strategies](https://weaviate.io/blog/chunking-strategies-for-rag), [Pinecone Tutorial](https://www.pinecone.io/learn/generation/better-rag/02b-semantic-chunking.ipynb)
-- **Libraries**: [semantic-chunking (JS)](https://github.com/jparkerweb/semantic-chunking), [Semantic_chunking (Python)](https://github.com/ThanhHung2112/Semantic_chunking)
+### 2. Structured Frontmatter (Downstream)
 
----
+Store chunk metadata in YAML for programmatic access:
 
-## Minimal Example
-
-```mdx
----
-title: "Skills Knowledge Base"
-global_context: "This document organizes my core skills in AI, RAG, and engineering practices, serving as a Context-first Document example."
----
-
-<Chunk id="skill-01" semantic_tags={["AI", "Embedding"]} context="Core concept: vectors and embeddings">
-Vectors are numerical representations of data, enabling similarity calculations.
-</Chunk>
-
-<Chunk id="skill-02" semantic_tags={["RAG", "Pipeline"]} context="RAG system workflow overview">
-Retrieval-Augmented Generation (RAG) typically involves:
-1. Data ingestion
-2. Chunking
-3. Embedding
-4. Vector retrieval
-5. Feeding retrieved results to LLM
-</Chunk>
+```yaml
+chunks:
+  - id: skill:python
+    tags: [Python, Backend]
+    context: "50-100 token description..."
 ```
 
-**Key elements:**
-- `global_context` in YAML front matter — document-level context inherited by all chunks
-- `<Chunk>` tags with `semantic_tags` and `context` — explicit semantic boundaries
-- Human-readable even without any pipeline — structure is the documentation
+This combination enables **end-to-end context preservation** from document authoring to retrieval.
 
 ---
 
-## What is ctxfst?
+## Export to Modern RAG Systems
 
-- **A cross-format specification** for context-first documents (Markdown / MDX / AsciiDoc / PDF mappings)
-- **A reference compiler (`ctxc`)** that transforms context-rich documents into structured, queryable outputs
-- **Forkable templates** for skills and knowledge bases, enabling teams to share a common semantic language
+ctxfst documents export to JSON ready for ingestion:
+
+```bash
+python export_to_lancedb.py document.md --output chunks.json
+```
+
+Output:
+```json
+{
+  "id": "skill:python",
+  "context": "Author's Python skills...",
+  "content": "## Python\nI use Python for...",
+  "tags": ["Python", "Backend"],
+  "source": "skills.md"
+}
+```
+
+### LanceDB Ingestion Example
+
+```python
+import lancedb
+
+db = lancedb.connect("./db")
+table = db.create_table("chunks", data)
+
+# Hybrid query: vector + tag filter
+results = table.search(query_embedding)
+    .where("'Python' IN tags")
+    .limit(10)
+```
+
+### LightRAG Integration
+
+```python
+# Tags become graph nodes automatically
+# Each chunk links to its semantic tags
+# Cross-document relationships emerge from shared tags
+```
+
+---
 
 ## Repositories
 
 | Repo | Description |
 |------|-------------|
-| `ctxfst/compiler` | The `ctxc` reference implementation |
-| `ctxfst/spec` | Formal specification: semantic model, fields, cross-format mappings |
-| `ctxfst/ctx-skills` | Forkable skills/KB examples |
-
-## What ctxfst is NOT
-
-- **Not a hosted service** — it's a standard + reference implementations, not SaaS
-- **Not Markdown-only** — `ctxc` processes context-first structure regardless of source format
-- **Not an LLM tool** — it's a compiler; what you do with the output (embed, index, query) is up to you
-- **Not a runtime** — it compiles documents, period. No APIs, no deployments.
+| [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation and export scripts |
+| `ctxfst/compiler` | The `ctxc` reference implementation (coming soon) |
+| `ctxfst/spec` | Formal specification (coming soon) |
 
 ---
 
 ## Getting Started
 
-- **Building RAG / KB systems?** Fork `ctxfst/ctx-skills` as your team's semantic backbone
-- **Implementing your own tools?** Use `ctxfst/spec` as the contract for your compilers and indexers
-- **Just exploring?** Clone `ctxfst/compiler`, run a minimal example, and see context-first documents in action
+1. **Fork [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md)** — includes validation + export scripts
+2. **Convert your documents** — add frontmatter with chunk definitions
+3. **Export to your RAG system** — JSON output ready for LanceDB/LightRAG
 
 ---
 
-<sub>ctxfst is in early design phase. Spec changes go through issues and RFC-style discussions. Alternative compiler implementations and real-world document examples are welcome.</sub>
+## References
+
+### Anthropic Contextual Retrieval
+- [Research Blog](https://www.anthropic.com/research/contextual-retrieval)
+- [Engineering Post](https://www.anthropic.com/engineering/contextual-retrieval)
+- [Cookbook Guide](https://platform.claude.com/cookbook/capabilities-contextual-embeddings-guide)
+
+### Semantic Chunking
+- [NAACL 2025 Paper](https://aclanthology.org/2025.findings-naacl.114/)
+- [Weaviate Chunking Strategies](https://weaviate.io/blog/chunking-strategies-for-rag)
+
+### Modern RAG Frameworks
+- [LanceDB](https://lancedb.github.io/lancedb/)
+- [LightRAG](https://github.com/HKUDS/LightRAG)
+- [HippoRAG 2](https://github.com/OSU-NLP-Group/HippoRAG)
+- [LlamaIndex Hybrid Search](https://docs.llamaindex.ai/)
+
+---
+
+<sub>ctxfst is in early design phase. Contributions and real-world examples welcome.</sub>
