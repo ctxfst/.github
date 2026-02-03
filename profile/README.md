@@ -14,7 +14,7 @@ Anthropic's [Contextual Retrieval](https://www.anthropic.com/news/contextual-ret
 |--------------------|-----------------|
 | Context **merged into** chunk content | Context stored as **structured metadata** |
 | Single combined string for embedding | Separate `context`, `content`, `tags` columns |
-| Hard to update context without re-embedding | Update context independently |
+| Hard to update context without re-embedding | Update context without rewriting content (re-embed depends on strategy) |
 | One-dimensional retrieval | Multi-dimensional: vector + graph + filter |
 
 ### The Problem with "Context Prepending"
@@ -104,7 +104,7 @@ Built a payment processing system handling 10k transactions per second...
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**ctxfst gives you the same embedding quality as Anthropic's approach** (context + content combined for embedding), **plus structured metadata** for:
+ctxfst supports embedding either `content` only or `context + content` (same quality as Anthropic's approach), **plus structured metadata** for:
 - Hybrid search (vector + BM25 + filter)
 - Knowledge graph construction
 - Incremental updates
@@ -194,7 +194,7 @@ All extension fields are **optional** and **backward compatible**. Documents wit
 ctxfst documents export to JSON ready for ingestion:
 
 ```bash
-python export_to_lancedb.py document.md --output chunks.json
+python3 skill-chunk-md/scripts/export_to_lancedb.py document.md --output chunks.json
 ```
 
 Output (with 2026 extensions):
@@ -216,15 +216,17 @@ Output (with 2026 extensions):
 ### LanceDB Ingestion Example
 
 ```python
+import json
 import lancedb
 
 db = lancedb.connect("./db")
+with open("chunks.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
+
 table = db.create_table("chunks", data)
 
 # Hybrid query: vector + tag filter
-results = table.search(query_embedding)
-    .where("'Python' IN tags")
-    .limit(10)
+results = table.search(query_embedding).where("'Python' IN tags").limit(10)
 ```
 
 ### LightRAG Integration
