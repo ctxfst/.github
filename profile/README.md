@@ -75,6 +75,10 @@ This works for simple vector search, but **modern RAG systems need structure**:
 
 ## ctxfst: Structured Frontmatter Format
 
+All files in this repository use the `ctxfst` standard. It is a strict, version-locked schema designed specifically for RAG operations.
+
+[Read the formal CtxFST Markdown Specification (v1.1)](../../references/ctxfst-spec.md) or use the [JSON Schema file](../../schema.json) to validate payloads crossing system boundaries.
+
 ctxfst separates **metadata** from **content** using YAML frontmatter.
 
 **Two-layer model (both part of the format):**
@@ -196,8 +200,8 @@ With ctxfst, the format stabilizes the graph inputs first. That makes later simi
 
 ctxfst stores the **graph skeleton**, not the final similarity scores:
 
-- `entities[]` = the clean node inventory
-- `chunks[].entities` = chunk-to-entity edges
+- `entities[]` = the clean node inventory (v1.1 feature)
+- `chunks[].entities` = chunk-to-entity edges (v1.1 feature)
 - embeddings = entity vectors
 - cosine similarity or graph embedding = entity-to-entity edge weights
 
@@ -420,13 +424,99 @@ results = table.search(query_embedding).where("'Python' IN tags").limit(10)
 
 ---
 
+## Upgrade Path
+
+ctxfst is most useful when treated as a **foundation layer**, not the final system. The format gives you structured documents, canonical entities, and chunk-to-entity links; higher-level GraphRAG behavior is built on top of that foundation.
+
+### Phase 1: Structured Documents
+
+Start with the core format:
+
+- add YAML frontmatter
+- define `chunks[]`
+- add `context`, `tags`, and optional extension fields
+- wrap content in `<Chunk>` tags
+
+At this stage, you already have better retrieval than raw Markdown because the document is reviewable, structured, and exportable.
+
+### Phase 2: Entity Layer
+
+Add the semantic graph skeleton:
+
+- define canonical `entities[]`
+- normalize names and aliases
+- link chunks through `chunks[].entities`
+- validate that chunk references only point to real entities
+
+At this stage, ctxfst moves from chunk-only retrieval to entity-aware retrieval.
+
+### Phase 3: Entity Embedding Graph
+
+Compute similarity edges on top of the schema:
+
+- build a text representation for each entity
+- optionally enrich it with linked chunk context
+- embed each entity representation
+- compute cosine similarity or run graph embedding
+- create `Entity -> Entity` edges such as `SIMILAR_TO` or `RELATED_TO`
+
+At this stage, you have a reusable entity graph for graph databases, recommendation, and GraphRAG expansion.
+
+### Phase 4: Graph Database Integration
+
+Load the exported JSON into a graph system:
+
+- `entities[]` -> `Entity` nodes
+- `chunks[]` -> `Chunk` nodes
+- `chunks[].entities` -> `MENTIONS` edges
+- similarity outputs -> `SIMILAR_TO` edges
+
+This is the point where Lance Graph, HelixDB, Neo4j, FalkorDB, or similar systems become first-class backends for ctxfst data.
+
+### Phase 5: Retrieval and Answering
+
+Build the actual GraphRAG loop:
+
+1. match the query to one or more entities
+2. expand to nearby entities through similarity or traversal
+3. retrieve supporting chunks linked to those entities
+4. rerank or filter with metadata
+5. synthesize the final answer
+
+At this stage, ctxfst is no longer just a file format; it is the input contract for a full retrieval system.
+
+### Phase 6: Productization
+
+Finally, package the workflow for a specific audience or domain:
+
+- skills and career knowledge graphs
+- engineering knowledge bases
+- portfolio and learning systems
+- domain-specific GraphRAG tutorials and starter kits
+
+This is where differentiation happens. The same ctxfst format can power general RAG pipelines or highly specialized products.
+
+### Practical reading
+
+If you are building with ctxfst today, the upgrade path is:
+
+1. stabilize the document schema
+2. stabilize the entity catalog
+3. compute entity similarity
+4. load the graph into a graph-aware backend
+5. build query-time traversal and chunk retrieval
+
+That is the intended progression from **structured document format** to **entity graph** to **full GraphRAG system**.
+
+---
+
 ## Repositories
 
 | Repo | Description |
 |------|-------------|
 | [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation and export scripts |
 | `ctxfst/compiler` | The `ctxc` reference implementation (coming soon) |
-| `ctxfst/spec` | Formal specification (coming soon) |
+| [`ctxfst/spec`](../../references/ctxfst-spec.md) | Formal specification v1.1 + [JSON Schema](../../schema.json) |
 
 ---
 
@@ -437,18 +527,18 @@ ctxfst is designed to adapt to RAG advances while maintaining backward compatibi
 ### Released
 
 - ✅ **v1.0** (2026-01) — Core frontmatter format with `context`, `tags`, `content` separation
-- ✅ **v1.1** (2026-02) — Temporal, Agentic, Multi-Modal extensions for 2026 RAG trends
+- ✅ **v1.1** (2026-03) — Entity Graph layer: top-level `entities[]` catalog, `chunks[].entities` linkage
+- ✅ **Formal spec** — [CtxFST Specification v1.1](../../references/ctxfst-spec.md) and [JSON Schema](../../schema.json) for cross-language validation
 
 ### In Progress
 
-- 🚧 **v1.2** (2026-Q2) — Parametric RAG metadata support, streaming chunk updates
-- 🚧 **Integration examples** — Reference implementations for LanceDB, LightRAG, LlamaIndex
+- 🚧 **v1.2** (2026-Q2) — Agentic/Temporal extensions: `priority`, `dependencies`, `created_at`, `version`
+- 🚧 **Integration examples** — Reference implementations for LanceDB, Lance Graph, HelixDB, LightRAG
 
 ### Planned
 
 - 📋 **v2.0** (2026-Q3) — Self-learning embeddings, feedback loop metadata
 - 📋 **ctxc compiler** — Automatic context generation from source documents
-- 📋 **Formal spec** — JSON Schema validation and cross-language parsers
 
 **Philosophy**: ctxfst evolves as RAG systems evolve, but all extensions are **optional** and **backward compatible**. Simple use cases stay simple; advanced features are available when needed.
 
