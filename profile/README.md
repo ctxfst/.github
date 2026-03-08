@@ -2,7 +2,7 @@
 
 > Traditional RAG chunking strips documents of their context.  
 > ctxfst is a document standard that weaves context into the structure itself,  
-> so LanceDB, LightRAG, or any retrieval system gets complete semantics on read.
+> so LanceDB, Lance Graph, HelixDB, or any retrieval system gets complete semantics on read.
 
 ---
 
@@ -66,7 +66,8 @@ embedding = embed(stored_chunk)
 
 This works for simple vector search, but **modern RAG systems need structure**:
 - **LanceDB** — needs separate columns for filtering and hybrid search
-- **LightRAG / HippoRAG** — extract entities from `tags`, build knowledge graphs
+- **Lance Graph / HelixDB** — needs proper entity catalogs to build knowledge graphs
+- **LightRAG / HippoRAG** — extract entities to build graph embeddings
 - **LlamaIndex** — hybrid retrieval with metadata filters
 - **RAG-Anything / DyG-RAG** — multi-modal and dynamic graph retrieval
 
@@ -125,8 +126,9 @@ Built a payment processing system handling 10k transactions per second...
 | System | How ctxfst Helps |
 |--------|------------------|
 | **LanceDB** | Store `context`, `content`, `tags` as separate columns; filter by tags, embed context+content |
+| **Lance Graph / HelixDB** | Top-level `entities` map perfectly to graph nodes, chunk `entities` arrays create edges |
 | **LightRAG** | `tags` become graph nodes; `dependencies` create edges; `context` improves entity extraction |
-| **HippoRAG 2** | Structured `id` enables cross-document linking; tags form knowledge graph edges |
+| **HippoRAG 2** | Structured `id` enables cross-document linking; entities form knowledge graph edges |
 | **LlamaIndex Agentic** | `priority` hints guide agent retrieval order; hybrid search with metadata filters |
 | **RAG-Anything** | Multi-modal support via `type` field (text/image/video/audio) |
 | **DyG-RAG / T-GRAG** | Temporal graphs from `created_at` + `version`; dynamic relationships via tags |
@@ -360,6 +362,8 @@ ctxfst is designed to adapt to RAG advances while maintaining backward compatibi
 
 ### Modern RAG Frameworks
 - [LanceDB](https://lancedb.github.io/lancedb/)
+- [Lance Graph](https://github.com/lancedb/lance-graph)
+- [HelixDB](https://github.com/HelixDB/helix-db)
 - [LightRAG](https://github.com/HKUDS/LightRAG)
 - [HippoRAG 2](https://github.com/OSU-NLP-Group/HippoRAG)
 - [LlamaIndex Hybrid Search](https://docs.llamaindex.ai/)
