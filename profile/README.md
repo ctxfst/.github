@@ -136,6 +136,119 @@ Built a payment processing system handling 10k transactions per second...
 
 ---
 
+## Where Entity Similarity Comes From
+
+Adding a top-level `entities` catalog does **not** mean ctxfst stores similarity by itself. The format gives you a clean, canonical set of graph nodes; the similarity graph is computed **afterward** by the retrieval system.
+
+In practice, ctxfst separates three concerns:
+
+1. **Entity identity** — `entities[]` defines the canonical nodes (`id`, `name`, `type`, `aliases`)
+2. **Chunk linkage** — `chunks[].entities` defines which passages discuss which entities
+3. **Similarity generation** — embeddings or graph algorithms compute which entities are close to each other
+
+### Minimal pipeline
+
+```text
+CtxFST document
+  -> read entities[]
+  -> build entity representations
+  -> embed each entity representation
+  -> compute cosine similarity
+  -> create Entity -> Entity edges above a threshold
+```
+
+### What gets embedded
+
+The simplest approach is to embed the entity's own text:
+
+```text
+name: FastAPI
+type: framework
+aliases: []
+```
+
+A stronger approach is to enrich the entity representation using the chunks linked to it:
+
+```text
+name: FastAPI
+type: framework
+mentioned in chunks:
+- Python backend skills focused on REST APIs and service implementation
+- Python skills for API development, service work, and data processing
+related entities:
+- Python
+- Pandas
+```
+
+This usually produces much better graph structure than embedding the bare entity name alone.
+
+### Why the entity layer matters
+
+Without a canonical entity catalog, systems only see noisy strings or tags:
+
+- `K8s` and `Kubernetes` may become two different nodes
+- `Python` may be treated as a tag in one place and a skill in another
+- generic terms like `tool` or `project` may pollute the graph
+
+With ctxfst, the format stabilizes the graph inputs first. That makes later similarity edges cleaner, more explainable, and easier to reuse across systems like Lance Graph, HelixDB, LightRAG, or Neo4j-based GraphRAG stacks.
+
+### Important distinction
+
+ctxfst stores the **graph skeleton**, not the final similarity scores:
+
+- `entities[]` = the clean node inventory
+- `chunks[].entities` = chunk-to-entity edges
+- embeddings = entity vectors
+- cosine similarity or graph embedding = entity-to-entity edge weights
+
+This means ctxfst is compatible with multiple strategies:
+
+- plain text embeddings over entity descriptions
+- chunk-aggregated embeddings using linked chunk context
+- graph embeddings such as node2vec after the first graph is built
+
+---
+
+## How to Import into a Graph Database
+
+Because the `entities` catalog and `chunks[].entities` arrays are standardized, you don't need complex extraction pipelines to build your first knowledge graph. You can insert them directly into Neo4j, Lance Graph, or HelixDB.
+
+Here is a conceptual mapping using Python:
+
+```python
+import json
+
+# Load the CtxFST export payload
+with open('chunks.json') as f:
+    data = json.load(f)
+
+# 1. Create Entity Nodes
+for entity in data['entities']:
+    graph.execute("""
+        MERGE (e:Entity {id: $id})
+        SET e.name = $name, e.type = $type
+    """, id=entity['id'], name=entity['name'], type=entity['type'])
+
+# 2. Create Chunk Nodes
+for chunk in data['chunks']:
+    graph.execute("""
+        MERGE (c:Chunk {id: $id})
+        SET c.context = $context, c.content = $content
+    """, id=chunk['id'], context=chunk['context'], content=chunk['content'])
+
+    # 3. Create Chunk -> Entity Edges
+    for entity_id in chunk.get('entities', []):
+        graph.execute("""
+            MATCH (c:Chunk {id: $chunk_id})
+            MATCH (e:Entity {id: $entity_id})
+            MERGE (c)-[:MENTIONS]->(e)
+        """, chunk_id=chunk['id'], entity_id=entity_id)
+```
+
+Once this skeleton is loaded, you can run embedding models over the `Entity` nodes to generate `(e1)-[:SIMILAR_TO]->(e2)` edges, completing the GraphRAG architecture.
+
+---
+
 ## How ctxfst Differs from Anthropic
 
 ```
