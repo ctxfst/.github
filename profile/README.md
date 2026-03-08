@@ -74,13 +74,27 @@ This works for simple vector search, but **modern RAG systems need structure**:
 
 ## ctxfst: Structured Frontmatter Format
 
-ctxfst separates **metadata** from **content** using YAML frontmatter:
+ctxfst separates **metadata** from **content** using YAML frontmatter.
+
+**Two-layer model (both part of the format):**
+- **Entity layer** (optional): Canonical concepts—skills, tools, frameworks—as a document-level catalog. Entities are the *semantic index*: they drive navigation, graph edges, and “what is this about?”
+- **Chunk layer** (required): Bounded content plus metadata (context, tags, optional entity links). Chunks are the *content carrier*: they are what gets retrieved and sent to the LLM.
+
+So “entity as protagonist” and “chunk as carrier” are both part of ctxfst. The format stays the same; entity-first workflows are fully supported.
 
 ```markdown
 ---
+entities:
+  - id: entity:python
+    name: Python
+    type: skill
+  - id: entity:go
+    name: Go
+    type: skill
 chunks:
   - id: skill:python
     tags: [Python, Backend, FastAPI]
+    entities: [entity:python]
     context: "Author's Python skills for REST APIs and data pipelines"
     created_at: "2026-02-03"
     version: 1
@@ -88,6 +102,7 @@ chunks:
     dependencies: []
   - id: project:payment-gateway
     tags: [Project, FinTech, Go]
+    entities: [entity:python, entity:go]
     context: "Payment system handling 10k TPS with hybrid architecture"
     created_at: "2026-01-15"
     version: 2
@@ -134,12 +149,12 @@ Built a payment processing system handling 10k transactions per second...
 ┌─────────────────────────────────────────────────────────────┐
 │  ctxfst Frontmatter Format                                  │
 │  ┌──────────────┐ ┌───────────────┐ ┌─────────────────────┐ │
-│  │ context      │ │ tags          │ │ content             │ │
-│  │ (metadata)   │ │ (filterable)  │ │ (original text)     │ │
+│  │ entities     │ │ context+tags  │ │ content             │ │
+│  │ (catalog)    │ │ (metadata)    │ │ (original text)     │ │
 │  └──────────────┘ └───────────────┘ └─────────────────────┘ │
 │         ↓                 ↓                   ↓             │
 │    Graph nodes      Filter queries     Vector embedding     │
-│    Entity extraction                   (context + content)  │
+│    Graph edges                         (context + content)  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -239,16 +254,28 @@ python3 skill-chunk-md/scripts/export_to_lancedb.py document.md --output chunks.
 Output (with 2026 extensions):
 ```json
 {
-  "id": "skill:python",
-  "context": "Author's Python skills...",
-  "content": "## Python\nI use Python for...",
-  "tags": ["Python", "Backend"],
-  "created_at": "2026-02-03",
-  "version": 1,
-  "type": "text",
-  "priority": "high",
-  "dependencies": [],
-  "source": "skills.md"
+  "entities": [
+    {
+      "id": "entity:python",
+      "name": "Python",
+      "type": "skill"
+    }
+  ],
+  "chunks": [
+    {
+      "id": "skill:python",
+      "context": "Author's Python skills...",
+      "content": "## Python\nI use Python for...",
+      "tags": ["Python", "Backend"],
+      "entities": ["entity:python"],
+      "created_at": "2026-02-03",
+      "version": 1,
+      "type": "text",
+      "priority": "high",
+      "dependencies": [],
+      "source": "skills.md"
+    }
+  ]
 }
 ```
 
