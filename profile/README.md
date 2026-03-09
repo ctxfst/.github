@@ -6,6 +6,32 @@
 
 ---
 
+## Start Here
+
+If you are new to `ctxfst`, use these entry points in this order:
+
+1. [`skill-chunk-md/README.md`](../../skill-chunk-md/README.md) for the fastest end-to-end demo
+2. [`references/ctxfst-spec.md`](../../references/ctxfst-spec.md) for the formal format definition
+3. [`schema.json`](../../schema.json) for machine validation across languages
+4. [`skill-chunk-md/assets/examples/career/`](../../skill-chunk-md/assets/examples/career/) for a shareable demo packet
+
+What the repo already gives you today:
+- a stable document format with versioned schema boundaries
+- a reference conversion skill for Markdown -> CtxFST
+- validation and diagnostics scripts
+- JSON export for vector and graph pipelines
+- a lightweight `Entity -> Entity` graph builder
+
+The shortest story is:
+- write or convert Markdown into `ctxfst`
+- validate the structure
+- export `chunks.json`
+- derive `entity-graph.json`
+
+That makes `ctxfst` more than a spec: it is a spec plus a runnable reference toolchain.
+
+---
+
 ## Documents as a Human–Machine Interface
 
 Most RAG tooling treats chunking as a one-way pipeline:
