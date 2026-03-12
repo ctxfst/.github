@@ -11,22 +11,25 @@
 If you are new to `ctxfst`, use these entry points in this order:
 
 1. [`skill-chunk-md/README.md`](../../skill-chunk-md/README.md) for the fastest end-to-end demo
-2. [`references/ctxfst-spec.md`](../../references/ctxfst-spec.md) for the formal format definition
-3. [`schema.json`](../../schema.json) for machine validation across languages
+2. [`references/ctxfst-spec.md`](../../skill-chunk-md/references/ctxfst-spec.md) for the formal format definition (v2.0)
+3. [`schema.json`](../../skill-chunk-md/schema.json) for machine validation across languages
 4. [`skill-chunk-md/assets/examples/career/`](../../skill-chunk-md/assets/examples/career/) for a shareable demo packet
+5. [`assets/examples/world-model-example.md`](../../skill-chunk-md/assets/examples/world-model-example.md) for a world model example with states, preconditions, and causal edges
 
 What the repo already gives you today:
 - a stable document format with versioned schema boundaries
 - a reference conversion skill for Markdown -> CtxFST
 - validation and diagnostics scripts
 - JSON export for vector and graph pipelines
-- a lightweight `Entity -> Entity` graph builder
+- a lightweight `Entity -> Entity` graph builder with auto-inferred causal edges
+- world state tracking and precondition-based skill selection for agentic workflows
 
 The shortest story is:
 - write or convert Markdown into `ctxfst`
 - validate the structure
 - export `chunks.json`
-- derive `entity-graph.json`
+- derive `entity-profiles.json` and `entity-graph.json`
+- track agent progress with `world_state.py`
 
 That makes `ctxfst` more than a spec: it is a spec plus a runnable reference toolchain.
 
@@ -103,15 +106,16 @@ This works for simple vector search, but **modern RAG systems need structure**:
 
 All files in this repository use the `ctxfst` standard. It is a strict, version-locked schema designed specifically for RAG operations.
 
-[Read the formal CtxFST Markdown Specification (v1.1)](../../references/ctxfst-spec.md) or use the [JSON Schema file](../../schema.json) to validate payloads crossing system boundaries.
+[Read the formal CtxFST Markdown Specification (v2.0)](../../skill-chunk-md/references/ctxfst-spec.md) or use the [JSON Schema file](../../skill-chunk-md/schema.json) to validate payloads crossing system boundaries.
 
 ctxfst separates **metadata** from **content** using YAML frontmatter.
 
-**Two-layer model (both part of the format):**
-- **Entity layer** (optional): Canonical concepts—skills, tools, frameworks—as a document-level catalog. Entities are the *semantic index*: they drive navigation, graph edges, and “what is this about?”
+**Three-layer model (all part of the format):**
+- **Entity layer** (optional): Canonical concepts—skills, tools, frameworks, states, goals—as a document-level catalog. Entities are the *semantic index*: they drive navigation, graph edges, and “what is this about?”
 - **Chunk layer** (required): Bounded content plus metadata (context, tags, optional entity links). Chunks are the *content carrier*: they are what gets retrieved and sent to the LLM.
+- **World Model layer** (optional, v2.0): State entities with `preconditions`/`postconditions` enable causal reasoning, agent planning, and runtime state tracking.
 
-So “entity as protagonist” and “chunk as carrier” are both part of ctxfst. The format stays the same; entity-first workflows are fully supported.
+“Entity as protagonist”, “chunk as carrier”, and “world model as planner” are all part of ctxfst. The format stays the same; each layer is independently useful and backward compatible.
 
 ```markdown
 ---
@@ -499,7 +503,19 @@ Load the exported JSON into a graph system:
 
 This is the point where Lance Graph, HelixDB, Neo4j, FalkorDB, or similar systems become first-class backends for ctxfst data.
 
-### Phase 5: Retrieval and Answering
+### Phase 5: World Model & Agentic Workflows
+
+Add state tracking and causal reasoning (v2.0):
+
+- define `state` entities for trackable conditions (e.g., `entity:has-raw-resume`)
+- add `preconditions` and `postconditions` to action/skill entities and chunks
+- the graph builder auto-infers `REQUIRES` / `LEADS_TO` causal edges from state dependencies
+- use `world_state.py` to track agent progress at runtime
+- use `skill_selector.py` for deterministic, precondition-based skill selection
+
+At this stage, ctxfst becomes an agent-ready world model — not just retrieval, but planning and execution.
+
+### Phase 6: Retrieval and Answering
 
 Build the actual GraphRAG loop:
 
@@ -511,7 +527,7 @@ Build the actual GraphRAG loop:
 
 At this stage, ctxfst is no longer just a file format; it is the input contract for a full retrieval system.
 
-### Phase 6: Productization
+### Phase 7: Productization
 
 Finally, package the workflow for a specific audience or domain:
 
@@ -530,9 +546,10 @@ If you are building with ctxfst today, the upgrade path is:
 2. stabilize the entity catalog
 3. compute entity similarity
 4. load the graph into a graph-aware backend
-5. build query-time traversal and chunk retrieval
+5. add world model state tracking and causal edges
+6. build query-time traversal and chunk retrieval
 
-That is the intended progression from **structured document format** to **entity graph** to **full GraphRAG system**.
+That is the intended progression from **structured document format** to **entity graph** to **world model** to **full GraphRAG/Agent system**.
 
 ---
 
@@ -540,9 +557,9 @@ That is the intended progression from **structured document format** to **entity
 
 | Repo | Description |
 |------|-------------|
-| [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation and export scripts |
+| [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation, export, world state, and graph builder scripts |
 | `ctxfst/compiler` | The `ctxc` reference implementation (coming soon) |
-| [`ctxfst/spec`](../../references/ctxfst-spec.md) | Formal specification v1.1 + [JSON Schema](../../schema.json) |
+| [`ctxfst/spec`](../../skill-chunk-md/references/ctxfst-spec.md) | Formal specification v2.0 + [JSON Schema](../../skill-chunk-md/schema.json) |
 
 ---
 
@@ -553,20 +570,19 @@ ctxfst is designed to adapt to RAG advances while maintaining backward compatibi
 ### Released
 
 - ✅ **v1.0** (2026-01) — Core frontmatter format with `context`, `tags`, `content` separation
-- ✅ **v1.1** (2026-03) — Entity Graph layer: top-level `entities[]` catalog, `chunks[].entities` linkage
-- ✅ **Formal spec** — [CtxFST Specification v1.1](../../references/ctxfst-spec.md) and [JSON Schema](../../schema.json) for cross-language validation
+- ✅ **v1.1** (2026-02) — Entity Graph layer: top-level `entities[]` catalog, `chunks[].entities` linkage
+- ✅ **v2.0** (2026-03) — World Model First architecture: `state` entities, `preconditions`/`postconditions`, auto-inferred causal edges (`REQUIRES`/`LEADS_TO`), world state tracking, and deterministic skill selection
+- ✅ **Formal spec** — [CtxFST Specification v2.0](../../skill-chunk-md/references/ctxfst-spec.md) and [JSON Schema](../../skill-chunk-md/schema.json) for cross-language validation
 
 ### In Progress
 
-- 🚧 **v1.2** (2026-Q2) — Agentic/Temporal extensions: `priority`, `dependencies`, `created_at`, `version`
 - 🚧 **Integration examples** — Reference implementations for LanceDB, Lance Graph, HelixDB, LightRAG
 
 ### Planned
 
-- 📋 **v2.0** (2026-Q3) — Self-learning embeddings, feedback loop metadata
 - 📋 **ctxc compiler** — Automatic context generation from source documents
 
-**Philosophy**: ctxfst evolves as RAG systems evolve, but all extensions are **optional** and **backward compatible**. Simple use cases stay simple; advanced features are available when needed.
+**Philosophy**: ctxfst evolves as RAG systems evolve, but all extensions are **optional** and **backward compatible**. Simple use cases stay simple; advanced features are available when needed. v2.0 is a strict superset of v1.x — basic parsers ignore world model fields safely.
 
 ---
 
