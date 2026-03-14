@@ -15,6 +15,7 @@ If you are new to `ctxfst`, use these entry points in this order:
 3. [`schema.json`](../../skill-chunk-md/schema.json) for machine validation across languages
 4. [`skill-chunk-md/assets/examples/career/`](../../skill-chunk-md/assets/examples/career/) for a shareable demo packet
 5. [`assets/examples/world-model-example.md`](../../skill-chunk-md/assets/examples/world-model-example.md) for a world model example with states, preconditions, and causal edges
+6. [`skill-chunk-md/scripts/agent_loop.py`](../../skill-chunk-md/scripts/agent_loop.py) for the closed-loop agent runtime (lookahead planning, relation-aware routing, interactive critique)
 
 What the repo already gives you today:
 - a stable document format with versioned schema boundaries
@@ -23,6 +24,7 @@ What the repo already gives you today:
 - JSON export for vector and graph pipelines
 - a lightweight `Entity -> Entity` graph builder with auto-inferred causal edges
 - world state tracking and precondition-based skill selection for agentic workflows
+- a closed-loop agent runtime with BFS lookahead planning, relation-aware routing, relation-specific explanations, and interactive plan critique — no LLM required
 
 The shortest story is:
 - write or convert Markdown into `ctxfst`
@@ -30,6 +32,7 @@ The shortest story is:
 - export `chunks.json`
 - derive `entity-profiles.json` and `entity-graph.json`
 - track agent progress with `world_state.py`
+- run the full planning loop with `agent_loop.py`
 
 That makes `ctxfst` more than a spec: it is a spec plus a runnable reference toolchain.
 
@@ -512,8 +515,9 @@ Add state tracking and causal reasoning (v2.0):
 - the graph builder auto-infers `REQUIRES` / `LEADS_TO` causal edges from state dependencies
 - use `world_state.py` to track agent progress at runtime
 - use `skill_selector.py` for deterministic, precondition-based skill selection
+- use `agent_loop.py` to close the full loop: read world state → select skill → execute → write postconditions back → repeat
 
-At this stage, ctxfst becomes an agent-ready world model — not just retrieval, but planning and execution.
+At this stage, ctxfst becomes an agent-ready world model with a complete closed-loop runtime: BFS lookahead planning, relation-aware Dijkstra routing (causal edges cost 1, similarity edges cost 3), relation-specific explanations, and interactive human-in-the-loop plan critique — all without an LLM in the planning loop.
 
 ### Phase 6: Retrieval and Answering
 
@@ -557,7 +561,7 @@ That is the intended progression from **structured document format** to **entity
 
 | Repo | Description |
 |------|-------------|
-| [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation, export, world state, and graph builder scripts |
+| [`skill-chunk-md`](https://github.com/ctxfst/skill-chunk-md) | Markdown → ctxfst converter with validation, export, graph builder, world state, and a closed-loop agent runtime (lookahead planning, relation-aware routing, interactive plan critique, 66 end-to-end tests) |
 | `ctxfst/compiler` | The `ctxc` reference implementation (coming soon) |
 | [`ctxfst/spec`](../../skill-chunk-md/references/ctxfst-spec.md) | Formal specification v2.0 + [JSON Schema](../../skill-chunk-md/schema.json) |
 
@@ -572,6 +576,7 @@ ctxfst is designed to adapt to RAG advances while maintaining backward compatibi
 - ✅ **v1.0** (2026-01) — Core frontmatter format with `context`, `tags`, `content` separation
 - ✅ **v1.1** (2026-02) — Entity Graph layer: top-level `entities[]` catalog, `chunks[].entities` linkage
 - ✅ **v2.0** (2026-03) — World Model First architecture: `state` entities, `preconditions`/`postconditions`, auto-inferred causal edges (`REQUIRES`/`LEADS_TO`), world state tracking, and deterministic skill selection
+- ✅ **v2.1** (2026-03) — Complete agent runtime: closed-loop `agent_loop.py`, BFS multi-step lookahead planning, relation-aware Dijkstra routing, relation-specific explanations, interactive human-in-the-loop plan critique, 66 end-to-end tests
 - ✅ **Formal spec** — [CtxFST Specification v2.0](../../skill-chunk-md/references/ctxfst-spec.md) and [JSON Schema](../../skill-chunk-md/schema.json) for cross-language validation
 
 ### In Progress
