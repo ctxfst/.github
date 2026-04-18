@@ -16,6 +16,7 @@ If you are new to `ctxfst`, use these entry points in this order:
 4. [`skill-chunk-md/assets/examples/career/`](../../skill-chunk-md/assets/examples/career/) for a shareable demo packet
 5. [`assets/examples/world-model-example.md`](../../skill-chunk-md/assets/examples/world-model-example.md) for a world model example with states, preconditions, and causal edges
 6. [`skill-chunk-md/scripts/agent_loop.py`](../../skill-chunk-md/scripts/agent_loop.py) for the closed-loop agent runtime (lookahead planning, relation-aware routing, interactive critique)
+7. [`skill-chunk-md/assets/examples/entity-centric/`](../../skill-chunk-md/assets/examples/entity-centric/) for the one-file-one-entity convention (memory-shaped / per-entity dossier use cases)
 
 What the repo already gives you today:
 - a stable document format with versioned schema boundaries
@@ -25,6 +26,7 @@ What the repo already gives you today:
 - a lightweight `Entity -> Entity` graph builder with auto-inferred causal edges
 - world state tracking and precondition-based skill selection for agentic workflows
 - a closed-loop agent runtime with BFS lookahead planning, relation-aware routing, relation-specific explanations, and interactive plan critique — no LLM required
+- an optional entity-centric convention (one file = one entity) for memory / per-entity dossier use cases
 
 The shortest story is:
 - write or convert Markdown into `ctxfst`
@@ -481,7 +483,7 @@ Add the semantic graph skeleton:
 - link chunks through `chunks[].entities`
 - validate that chunk references only point to real entities
 
-At this stage, ctxfst moves from chunk-only retrieval to entity-aware retrieval.
+At this stage, ctxfst moves from chunk-only retrieval to entity-aware retrieval. If your data grows as a per-entity knowledge base (memory-shaped), consider the one-file-one-entity convention and validate with `--entity-centric` (see [`skill-chunk-md/assets/examples/entity-centric/`](../../skill-chunk-md/assets/examples/entity-centric/)).
 
 ### Phase 3: Entity Embedding Graph
 
