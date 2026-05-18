@@ -62,7 +62,7 @@ This turns documents into something you can test and iterate on, instead of a bl
 ctxfst makes changes *possible*, but it does not automatically tell you *what to change*. A complete workflow typically needs a diagnostic layer on top of the format layer:
 
 ```
-Format layer: frontmatter + <Chunk> tags → editable structure
+Format layer: frontmatter + %% chunk-start %% / %% chunk-end %% markers → editable structure
 Diagnostic layer: checks → signals → suggestions → (optional) edits for review
 ```
 
@@ -149,15 +149,15 @@ chunks:
     type: text
 ---
 
-<Chunk id="skill:python">
+%% chunk-start id="skill:python" %%
 ## Python
 I use Python for building REST APIs and data pipelines...
-</Chunk>
+%% chunk-end %%
 
-<Chunk id="project:payment-gateway">
+%% chunk-start id="project:payment-gateway" %%
 ## Payment Gateway
 Built a payment processing system handling 10k transactions per second...
-</Chunk>
+%% chunk-end %%
 ```
 
 ### Why This Matters for Modern RAG (2026)
@@ -470,7 +470,7 @@ Start with the core format:
 - add YAML frontmatter
 - define `chunks[]`
 - add `context`, `tags`, and optional extension fields
-- wrap content in `<Chunk>` tags
+- wrap content in `%% chunk-start %%` / `%% chunk-end %%` markers
 
 At this stage, you already have better retrieval than raw Markdown because the document is reviewable, structured, and exportable.
 
