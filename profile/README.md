@@ -13,6 +13,23 @@
 
 ---
 
+## Why Four Slots Make Vector Search Work Across Years
+
+People often blame embedding models when vector search fails to connect the same recurring problem across a decade:
+
+- **2013 note**: *"Set up a site wiki engine"*
+- **2014 note**: *"Installed Evernote on my phone, voice notes are super convenient"*
+- **2023 note**: *"Prompting ChatGPT to build a Zettelkasten card bot"*
+
+Across 15 years of personal notes, plain cosine similarity between notes on this same recurring problem averaged **`0.623`** (barely above the **`0.534`** random baseline)—not because the embedding model is dumb, but because **the invariant half of the problem was never written into the text**:
+
+1. **Un-coached notes only record Slot 2 (the tool or object of the day)**. Tools expire every three years (`Wiki` → `Evernote` → `ChatGPT`), so the embedding model only sees unrelated surface nouns.
+2. **Coaching the Four Slots forces you to write down the part that stays invariant across a decade**: **what concrete phenomenon blocked you (Slot 3: Blocker)** and **how that obstacle changed after your action (Slot 4: Outcome)**.
+3. Modern embedding models (`voyage-3.5`, etc.) are highly sensitive to relational tension—once that skeleton is actually written in the prose. Writing the role relationships into the note raised cross-era cosine similarity from **`0.623` to `0.858`** without changing the retrieval algorithm at all.
+4. Trying to extract structure *retroactively* from old, un-coached notes failed (`0.51` entity AUC, `0.629` retroactive four-slot AUC) because `46%` of old notes never wrote down the blocker and `39%` never wrote down the outcome.
+
+---
+
 ## 1. Write-Time Four-Slot Line Coach (`張力句四槽教練`)
 
 When writing a diary entry or work log, people naturally record *who* did *what* (Slots 1 & 2) or praise a new tool ("very convenient"), while leaving out the **concrete obstacle** that triggered the action (Slot 3) and **whether that obstacle actually receded** afterward (Slot 4). Months later, the note cannot be found—or if found, cannot tell you why you tried that approach or where it stalled.
