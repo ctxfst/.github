@@ -5,11 +5,12 @@
 
 ---
 
-## Repository
+## Repositories
 
 | Repository | Description |
 |---|---|
 | **[`skill-line-coach`](https://github.com/ctxfst/skill-line-coach)** | Agent skill for coaching **Four-Slot problem lines (`張力句四槽教練`)** in Markdown diaries/notes and linking recurring problem shapes with **`shape_layer.py`** |
+| **[`line-state`](https://github.com/ctxfst/line-state)** | Cron & on-demand state engine that tracks **24h / 3d `news`** and computes **`Current State` vs. `Desired State`** as plain Markdown for Obsidian |
 
 ---
 
